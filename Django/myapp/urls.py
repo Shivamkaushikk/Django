@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import my_api 
+from .views import process_excel
 
 urlpatterns = [
-    path('', my_api),  
+    path('upload-excel/', process_excel),
 ]

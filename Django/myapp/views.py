@@ -1,29 +1,18 @@
-from django.shortcuts import render
-
-# Create your views here.
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, parser_classes
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
-from rest_framework import status
-from django.conf import settings
+import pandas as pd
 
-# Optional: In-memory storage
-DATA_STORE = []
+@api_view(['POST'])
+@parser_classes([MultiPartParser])
+def process_excel(request):
+    file = request.FILES.get('file')
+    if not file:
+        return Response({"error": "No file uploaded"}, status=400)
 
-def check_api_key(request):
-    api_key = request.headers.get('X-API-KEY')
-    return api_key == settings.API_KEY
-
-@api_view(['GET', 'POST'])
-def my_api(request):
-    if not check_api_key(request):
-        return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
-
-    if request.method == 'GET':
-        return Response(DATA_STORE)
-
-    elif request.method == 'POST':
-        content = request.data.get('message')
-        if content:
-            DATA_STORE.append({'message': content})
-            return Response({'status': 'Message received!'}, status=status.HTTP_201_CREATED)
-        return Response({'error': 'No message provided'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        df = pd.read_excel(file)
+        df['processed'] = df[df.columns[0]].astype(str).str.upper()
+        return Response({"data": df.to_dict(orient='records')})
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
